@@ -186,3 +186,9 @@ fabric.properties
 
 # idea folder, uncomment if you don't need it
 # .idea
+/.idea/.gitignore
+/.idea/hydrajoy-python3.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/vcs.xml
