@@ -1,3 +1,8 @@
+# hydrajoy-python3
+
+I got my hands on a Razer Hydra and wanted to try it out. This fork simply converts the python file originally written in python 2 to python 3 so it can be executed on newer computers.
+This only supports 64bit Linux and OSX, and I only tested this on Linux. So there is no guarantee that this will work on osx.
+
 # hydrajoy
 
 A program that exposes the Razer Hydra controller as a 20 axis virtual joystick on Linux.
