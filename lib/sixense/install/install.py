@@ -12,15 +12,11 @@ config = ''
 
 menu = """
 Please select your operating system:
-1. Windows 32 bit
-2. Windows 64 bit
-3. Linux 32 bit
-4. Linux 65 bit
-5. OSX 32 bit
-6. OSX 64 bit
+1. Linux 64 bit
+2. OSX 64 bit
 """
 
-def isInt( s ):
+def is_int(s):
    try:
       int(s)
       return True
@@ -28,11 +24,72 @@ def isInt( s ):
       return False
 
 
+def clean_list(lst):
+   if "" in lst:
+      lst.remove("")
+   return lst
+
+
+def clean_string(string):
+   string = string.lstrip()
+   string = string.rstrip(" \t\r\n\0")
+   return string
+
+
+def force_string(value):
+   if not isinstance(value, str):
+      return value[0]
+   else:
+      return value
+
+
+def get_value(key):
+   return_value = []
+
+   file = open(cmdOpts.config)
+   for line in file:
+      line = clean_string(line)
+      if len(line) == 0:
+         continue
+
+      if line[0] == '#':
+         continue
+
+      pairs = line.split("=")
+
+      key_file = clean_string(pairs[0])
+      if key_file == key:
+         for element in pairs[1].split(","):
+            return_value.append(clean_string(element))
+         return return_value
+
+   return return_value
+
+
+def find_in_file(filename, search_str):    # see whether a string appears in a file at all, and tell on which line
+   lib_fd = open(filename,"r")
+   contents = lib_fd.readlines()
+   lib_fd.close()
+   index = 0
+   for fline in contents:
+      if search_str in fline:
+         return True, index
+      index = index + 1
+   return False, index
+
+
+def append_to_file(filename, new_str):
+   lib_fd = open(filename,"a")
+   lib_fd.write(new_str)
+   lib_fd.close()
+
+
 class SDKPackager:
-   def __init__( self ):
-      self.versionMajor = 1
+   def __init__(self):
+      self.firstErrorAfterHeader = None
+      self.versionMajor = 2
       self.versionMinor = 0
-      self.versionMacro = 1
+      self.versionMacro = 0
       
       self.currentDirectory = os.path.dirname(os.path.realpath(__file__))
       self.platform = ""
@@ -42,78 +99,23 @@ class SDKPackager:
       self.osx = []
       self.osx64 = []
       
-      print "\nSixense SDK Installation Script v%02d.%02d.%02d" % ( self.versionMajor, self.versionMinor, self.versionMacro )
-      if( not cmdOpts.printVersionAndExit ):
-         print "============================================"
+      print("\nSixense SDK Installation Script v%02d.%02d.%02d" % (self.versionMajor, self.versionMinor, self.versionMacro))
+      if not cmdOpts.printVersionAndExit:
+         print("============================================")
 
-   def cleanString( self, string ):
-      string = string.lstrip()
-      string = string.rstrip(" \t\r\n\0")
-      return string
-
-   def cleanList( self, lst):
-      if "" in lst:
-         lst.remove("")
-      return lst
-   
-   def forceString( self, value ):
-      if not isinstance(value, str):
-         return value[0]
-      else:
-         return value
+   def parse_config(self):
+      print("-----------------------------------------------")
+      print("Parsing Config File %s" % cmdOpts.config)
+      print("-----------------------------------------------")
       
-   def getValue( self, key ):
-      returnValue = []
+      self.parse_item()
 
-      file = open(cmdOpts.config)
-      for line in file:
-         line = self.cleanString(line)
-         if len(line) == 0:
-            continue
-            
-         if line[0] == '#':
-            continue
-
-         pairs = line.split("=")
-      
-         keyFile = self.cleanString(pairs[0])
-         if keyFile == key:
-            for element in pairs[1].split(","):
-               returnValue.append(self.cleanString(element))
-            return returnValue
-
-      return returnValue
-      
-   def find_in_file(self, filename, searchstr):    # see whether a string appears in a file at all, and tell on which line
-      libfd = open(filename,"r")
-      contents = libfd.readlines()
-      libfd.close()
-      index = 0
-      for fline in contents:
-         if searchstr in fline:
-            return True, index
-         index = index + 1
-      return False, index
-   
-   def append_to_file(self, filename, newstr):
-      libfd = open(filename,"a")
-      libfd.write(newstr)
-      libfd.close()
-             
-   def parseConfig( self ):
-   
-      print "-----------------------------------------------"
-      print "Parsing Config File %s" % cmdOpts.config
-      print "-----------------------------------------------"
-      
-      self.parseItem()
-
-   def parseItem( self ):
-      print "Finding Items"
+   def parse_item(self):
+      print("Finding Items")
       file = open(cmdOpts.config)
       
       for line in file:
-         line = self.cleanString(line)
+         line = clean_string(line)
 
          if len(line) == 0:
             continue
@@ -122,193 +124,162 @@ class SDKPackager:
             continue
 
          pairs = line.split("=")
-      
-         key = self.cleanString(pairs[0])
-         value = []
-      
-         if key == "linux_32" and self.platform == "linux_32":
-            sys.stdout.write("Found Linux 32 bit")
-            sys.stdout.flush()
-            for element in pairs[1].split(","):
-               if len(element) > 0:
-                  self.linux_32.append(self.cleanString(element))
-            print "                              Done"
+         key = clean_string(pairs[0])
+
          if key == "linux_64" and self.platform == "linux_64":
             sys.stdout.write("Found Linux 64 bit")
             sys.stdout.flush()
             for element in pairs[1].split(","):
                if len(element) > 0:
-                  self.linux_64.append(self.cleanString(element))
-            print "                             Done"
-         if key == "osx_32" and self.platform == "osx_32":
-            sys.stdout.write("Found OSX 32 bit")
-            sys.stdout.flush()
-            for element in pairs[1].split(","):
-               if len(element) > 0:
-                  self.osx.append(self.cleanString(element))
-            print "                                 Done"
+                  self.linux_64.append(clean_string(element))
+            print("                             Done")
          if key == "osx_64" and self.platform == "osx_64":
             sys.stdout.write("Found OSX 64 bit")
             sys.stdout.flush()
             for element in pairs[1].split(","):
                if len(element) > 0:
-                  self.osx64.append(self.cleanString(element))
-            print "                                 Done"
+                  self.osx64.append(clean_string(element))
+            print("                                 Done")
                
       file.close()
-      print "Done\n"
+      print("Done\n")
 
-   def chooseTargetPlatform( self ):
-      response = ""
-      print menu
+   def choose_target_platform(self):
+      print(menu)
  
-      response = raw_input("Enter Selection: ")
-
-      if response == "3":
-         self.platform = "linux_32"
-      elif response == "4":
+      response = input("Enter Selection: ")
+      if response == "1":
          self.platform = "linux_64"
-      elif response == "5":
-         self.platform = "osx_32"
-      elif response == "6":
+      elif response == "2":
          self.platform = "osx_64"
       else:
-      	 if response == "1" or response == "2":
-	    print "Currently Unsupported Target Operating System"
-	 else:
-            print "Invalid Selection"
-         self.chooseTargetPlatform()
+         print("Invalid Selection")
+         self.choose_target_platform()
       
-   def preInstall( self ):
+   def preInstall(self):
       return
       
-   def install( self ):
-      self.copyFilesHelper( self.linux_32, "Linux 32 bit" )
-      self.copyFilesHelper( self.linux_64, "Linux 64 bit" )
-      self.copyFilesHelper( self.osx, "OSX 32 bit" )
-      self.copyFilesHelper( self.osx64, "OSX 64 bit" )
+   def install(self):
+      self.copy_files_helper(self.linux_64, "Linux 64 bit")
+      self.copy_files_helper(self.osx64, "OSX 64 bit")
       return
 
-   def copyFilesHelper( self, folderList, userText ):
+   def copy_files_helper(self, folder_list, user_text):
       if not cmdOpts.verbose: 
          self.firstErrorAfterHeader = True
-      destination = ""
-      source = ""
-      files = []
-      if len(folderList) > 0:
-         sys.stdout.write("- for %s\r" % userText)   
+
+      if len(folder_list) > 0:
+         sys.stdout.write("- for %s\r" % user_text)
          sys.stdout.flush()
          if cmdOpts.verbose:   
-            print ""
-         for element in folderList:
-            destination = self.getValue(element+"_destination")
-            source = self.getValue(element+"_source")
-            files = self.getValue(element+"_file")
-            source = self.cleanList(source)
-            files = self.cleanList(files)
+            print("")
+         for element in folder_list:
+            destination = get_value(element + "_destination")
+            source = get_value(element + "_source")
+            files = get_value(element + "_file")
+            source = clean_list(source)
+            files = clean_list(files)
             for outfile in files:
-               self.copyFileParser( destination, source, outfile )
+               self.copy_file_parser(destination, source, outfile)
          if not cmdOpts.verbose:
             sys.stdout.write("%46s\r" % "Done")
-            sys.stdout.write("- for %s\n" % userText) 
+            sys.stdout.write("- for %s\n" % user_text)
             sys.stdout.flush()
          else:
-            print "Done\n"
+            print("Done\n")
 
-   def copyFileParser( self, dstPath, srcPath, srcFile ):
-      dst = ""
-      src = ""
-      if not isinstance(dstPath, str):
-         dst = dstPath[0]
+   def copy_file_parser(self, dst_path, src_path, src_file):
+      if not isinstance(dst_path, str):
+         dst = dst_path[0]
       else:
-         dst =  dstPath  
-      if not isinstance(srcPath, str):
-         src = srcPath[0]
+         dst =  dst_path
+      if not isinstance(src_path, str):
+         src = src_path[0]
       else:
-         src =  srcPath
+         src =  src_path
 
-      pathsExist = True
+      paths_exist = True
       
       if not os.path.isdir(src):
          if self.firstErrorAfterHeader:
-            print ""
+            print("")
             self.firstErrorAfterHeader = False
-         print "Source Path Does Not Exist: %s" % src
-         pathsExist = False
+         print("Source Path Does Not Exist: %s" % src)
+         paths_exist = False
       if not os.path.isdir(dst):
          if self.firstErrorAfterHeader:
-            print ""
+            print("")
             self.firstErrorAfterHeader = False
-         print "Destination Path Does Not Exist: %s" % dst
-         pathsExist = False
+         print("Destination Path Does Not Exist: %s" % dst)
+         paths_exist = False
 
-      if not pathsExist:
+      if not paths_exist:
          return
          
       #copy all files
-      if srcFile.split('.')[0] == '*' and srcFile.split('.')[1] == '*':
+      if src_file.split('.')[0] == '*' and src_file.split('.')[1] == '*':
          for filename in os.listdir( os.path.join(".",src) ):
-            self.copyFile( dst, src, filename )
-      #copy all files by extention
-      elif srcFile.split('.')[0] == '*' and srcFile.split('.')[1] != '*':
+            self.copy_file(dst, src, filename)
+      #copy all files by extension
+      elif src_file.split('.')[0] == '*' and src_file.split('.')[1] != '*':
          for filename in os.listdir( os.path.join(".",src) ):
             if os.path.isfile(filename):
-               if filename.split('.')[1] == srcFile.split('.')[1]:
-                  self.copyFile( dst, src, filename )
+               if filename.split('.')[1] == src_file.split('.')[1]:
+                  self.copy_file(dst, src, filename)
       #copy all files starting with <>
-      elif srcFile.split('.')[0] != '*' and srcFile.split('.')[1] == '*':
+      elif src_file.split('.')[0] != '*' and src_file.split('.')[1] == '*':
          for filename in os.listdir( os.path.join(".",src) ):
-            if filename.split('.')[0] == srcFile.split('.')[0]:
-               self.copyFile( dst, src, filename )
+            if filename.split('.')[0] == src_file.split('.')[0]:
+               self.copy_file(dst, src, filename)
       #copy individual file
       else:
-         self.copyFile( dst, src, srcFile )
+         self.copy_file(dst, src, src_file)
    
-   def copyFile( self, dstPath, srcPath, srcFile ):
-      fileExists = True
+   def copy_file(self, dst_path, src_path, src_file):
+      file_exists = True
          
-      if not os.path.isfile(os.path.join(srcPath,srcFile)):
-         if os.path.isdir(os.path.join(srcPath,srcFile)):
+      if not os.path.isfile(os.path.join(src_path, src_file)):
+         if os.path.isdir(os.path.join(src_path, src_file)):
             if cmdOpts.verbose:
-               print "Copying all files from %s to %s" % (os.path.join(srcPath,srcFile), dstPath )
-            copytree(srcPath,os.path.join(dstPath,srcFile))
+               print("Copying all files from %s to %s" % (os.path.join(src_path, src_file), dst_path))
+            copytree(src_path, os.path.join(dst_path, src_file))
             return
          else:
             if self.firstErrorAfterHeader:
-               print ""
+               print("")
                self.firstErrorAfterHeader = False
-            print "Source File Does Not Exist: %s" % os.path.join(srcPath,srcFile)
-            fileExists = False
+            print("Source File Does Not Exist: %s" % os.path.join(src_path, src_file))
+            file_exists = False
 
-      if not fileExists:
+      if not file_exists:
          return
          
       if cmdOpts.verbose:
-         print "Copying File %s from %s to %s" % (srcFile, srcPath, dstPath )
-      copy( os.path.join(srcPath,srcFile), dstPath)
+         print("Copying File %s from %s to %s" % (src_file, src_path, dst_path))
+      copy(os.path.join(src_path, src_file), dst_path)
       
-   def postInstall( self ):
+   def post_install(self):
       if self.platform =="linux_32" or self.platform == "linux_64":
-         configFile = self.forceString(self.getValue("linux_library_config_file"))
-         libPath = self.forceString(self.getValue("linux_library_path"))
-         if os.path.isfile( configFile ):
-            found, index = self.find_in_file(configFile,libPath)    # is lib path already there?
+         config_file = force_string(get_value("linux_library_config_file"))
+         lib_path = force_string(get_value("linux_library_path"))
+         if os.path.isfile( config_file ):
+            found, index = find_in_file(config_file,lib_path)    # is lib path already there?
             if found:
-               print "Library path is already registered in %s, on line %d." % (configFile,index)
+               print("Library path is already registered in %s, on line %d." % (config_file,index))
             else:
-               print "Library path not registered yet. Adding library path to %s..." % configFile
-               self.append_to_file(configFile,"\n"+libPath+"\n")
+               print("Library path not registered yet. Adding library path to %s..." % config_file)
+               append_to_file(config_file,"\n"+lib_path+"\n")
             lib_update_cmd = "ldconfig"
             p = subprocess.Popen(lib_update_cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
          else:
-            print "Unable to Find ld.so.conf"
+            print("Unable to Find ld.so.conf")
       
-   def run( self ):
-      self.chooseTargetPlatform()
-      self.parseConfig()
+   def run(self):
+      self.choose_target_platform()
+      self.parse_config()
       self.preInstall()
       self.install()
-      self.postInstall()
+      self.post_install()
       
 # main program starts here
 if __name__ == '__main__':
@@ -344,6 +315,6 @@ if __name__ == '__main__':
    
    package = SDKPackager()
    
-   if( cmdOpts.printVersionAndExit ):
+   if cmdOpts.printVersionAndExit:
       exit()
    package.run()
